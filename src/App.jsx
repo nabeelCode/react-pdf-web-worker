@@ -1,35 +1,56 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import { faker } from "@faker-js/faker";
+import { saveAs } from "file-saver";
+import { wrap } from "comlink";
+import Worker from "./workers/pdf.worker?worker";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [data, setData] = useState([]);
+  const [numRows, setNumRows] = useState(0);
+
+  const generateFakeData = () => {
+    const fakeData = [];
+    for (let i = 0; i < numRows; i++) {
+      fakeData.push({
+        sInvNo: i,
+        invoiceDate: faker.date.anytime().toString(),
+        pcs: faker.number.int({ min: 1000, max: 100000 }),
+        invAmount: faker.number.int({ min: 1000, max: 100000 }),
+        transport: faker.company.name(),
+        lrNo: faker.number.int({ min: 0, max: 100 }),
+        lrDate: faker.date.anytime().toString(),
+      });
+    }
+    setData(fakeData);
+  };
+
+  const generatePdf = async () => {
+    const pdfWorker = wrap(new Worker());
+    const blob = await pdfWorker.renderPDFInWorker({ data });
+    saveAs(blob, "PDF");
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      <label>
+        Number of Rows:
+        <input
+          type="number"
+          value={numRows}
+          defaultValue={0}
+          onChange={(e) => setNumRows(parseInt(e.target.value))}
+        />
+      </label>
+      {console.log("data ", data)}
+      <button onClick={generateFakeData}>Generate Fake Data</button>
+
+      <button onClick={generatePdf}>Generate PDF based on the Fake Data</button>
+      {/* <RenderedPDFViewer
+        style={{ backgroundColor: 'grey', width: '500px', height: '760px' }}
+        data={data}
+      /> */}
+    </div>
+  );
 }
 
-export default App
+export default App;
